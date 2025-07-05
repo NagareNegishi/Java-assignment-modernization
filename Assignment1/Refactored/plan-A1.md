@@ -82,5 +82,21 @@ Therefore, we will create 3 interfaces to replace the ecs100 dependency:
 2. `FileChooserAdapter` - for file operations
 3. `UIAdapter` - for UI operations
 
+1. **GraphicsAdapter**:
+    - drawImage
+    - drawRect
+    - setColor
+    - fillRect
+    - clearGraphics
 
+2. **FileChooserAdapter**:
+    - open
+    - save
 
+3. **UIAdapter**:
+    - addButton
+    - setMouseListener
+    - setWindowSize
+    - setDivider
+    - println
+    - quit
