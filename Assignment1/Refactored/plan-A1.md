@@ -53,6 +53,7 @@ Simply put:
     - Use of Stream, Collections methods for list management
     - Method extraction for clarity
     - Remove redundant validation checks
+    - Use of Collections methods
 
 
 ## ECS100 Dependency Removal
