@@ -19,8 +19,4 @@ public record Shred(String filename, double size) {
     Shred(Path dir, int id, double size) {
         this(dir.resolve(id + ".png").toString(), size);
     }
-
-    public void draw(double left, double top, GraphicsAdapter ui) {
-        ui.drawImage(filename, left, top, size, size);
-    }
 }

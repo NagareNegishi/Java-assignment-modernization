@@ -8,13 +8,19 @@
  * ID:300653779
  */
 
-import ecs100.*;
 import java.awt.Color;
-import java.util.*;
-import java.io.*;
-import java.nio.file.*;
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import javax.imageio.ImageIO;
+
+import ecs100.UI;
+import ecs100.UIFileChooser;
 
 /**
  * DeShredder allows a user to sort fragments of a shredded document ("shreds") into strips, and

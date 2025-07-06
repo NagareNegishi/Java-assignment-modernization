@@ -46,10 +46,13 @@ Simply put:
 
 - **Shred class**:
     - The Puzzle piece should be immutable -> it should be record
+    - Shred class should not have any drawing methods, it should only store data
+    - Create a separate class for drawing operations
 
 - **DeShredder class**:
     - Use of Stream, Collections methods for list management
     - Method extraction for clarity
+    - Remove redundant validation checks
 
 
 ## ECS100 Dependency Removal
@@ -98,5 +101,5 @@ Therefore, we will create 3 interfaces to replace the ecs100 dependency:
     - setMouseListener
     - setWindowSize
     - setDivider
-    - println
+    - println (Can be just System.out.println)
     - quit
