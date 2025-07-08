@@ -45,6 +45,9 @@ public class DeShredder {
         this.TOP_STRIPS = TOP_WORKING + (SIZE + GAP);
     }
 
+    /**
+     * Loads shreds from a directory chosen by the user.
+     */
     private void loadShreds(){
         Path path = fileAdapter.open("Choose first shred in directory");
         Path dir = path.getParent();
@@ -55,6 +58,12 @@ public class DeShredder {
         display();
     }
 
+    /**
+     * Loads shreds from a specified directory and count.
+     * Clears existing shreds, working strip, and completed strips before loading new shreds.
+     * @param dir Directory containing the shreds
+     * @param count Number of shreds to load
+     */
     private void load(Path dir, int count) {
         assert dir != null : "Directory cannot be null";
         assert count > 0 : "Count must be greater than zero";
@@ -67,6 +76,10 @@ public class DeShredder {
         }
     }
 
+    /**
+     * Rotates the list of shreds.
+     * Moves the first shred to the end of the list.
+     */
     private void rotateList(){
         if(!shreds.isEmpty()) {
             Collections.rotate(shreds, -1);
@@ -74,6 +87,9 @@ public class DeShredder {
         }
     }
 
+    /**
+     * Shuffles the list of shreds.
+     */
     private void shuffleList(){
         if(!shreds.isEmpty()) {
             Collections.shuffle(shreds);
@@ -81,6 +97,9 @@ public class DeShredder {
         }
     }
 
+    /**
+     * Completes the current working strip and adds it to the completed strips.
+     */
     public void completeStrip() {
         if (!working.isEmpty()) {
             completed.add(new ArrayList<>(working)); // Shallow copy
@@ -89,9 +108,11 @@ public class DeShredder {
         }
     }
 
+    /**
+     * Displays the current state of the DeShredder.
+     */
     public void display(){
         graphicsAdapter.clearGraphics();
-
         drawStrip(shreds, TOP_ALL, null); // all shreds
         drawStrip(working, TOP_WORKING, Color.red); // working strip
         double y = TOP_STRIPS;
@@ -102,6 +123,12 @@ public class DeShredder {
         
     }
 
+    /**
+     * Draws a strip of shreds at a specified y-coordinate.
+     * @param strip
+     * @param y
+     * @param border
+     */
     private void drawStrip(List<Shred> strip, double y, Color border) {
         double x = LEFT;
         for (Shred shred : strip) {
@@ -115,18 +142,22 @@ public class DeShredder {
         }
     }
 
-
-
-    // Additional methods to perform the different actions, called by doMouse
-
-    /*# YOUR CODE HERE */
     /**
-     * Move a Shred from allShreds to a position in the working strip
+     * Moves an item from one list to another at specified indices.
+     * @param <T> the type of the item to move (expected to be Shred or List<Shred>)
+     * @param from the list to move the item from
+     * @param to the list to move the item to
+     * @param fromIndex the index of the item to move in the from list
+     * @param toIndex the index to insert the item in the to list
      */
     private <T> void moveItem(List<T> from, List<T> to, int fromIndex, int toIndex){
         if (fromIndex < 0 || fromIndex >= from.size()) return;
         T item = from.remove(fromIndex);
 
+        /*
+        * Still need to handle the case toIndex < 0 !!!!!!!!!!!!!
+        * return or max(0, toIndex) ?
+        */
         if(toIndex >= to.size()){ // If toIndex is out of bounds, add to the end
             to.add(item);
         } else{
@@ -135,12 +166,158 @@ public class DeShredder {
     }
 
 
+    /**
+     * Simple Mouse actions to move shreds and strips
+     *  User can
+     *  - move a Shred from allShreds to a position in the working strip
+     *  - move a Shred from the working strip back into allShreds
+     *  - move a Shred around within the working strip.
+     *  - move a completed Strip around within the list of completed strips
+     *  - move a completed Strip back to become the working strip
+     *    (but only if the working strip is currently empty)
+     * 
+     * lets analyze the actions:
+     * 
+     * 1. all to work as Shred
+     * 2. work to all as Shred
+     * 3. work to work as Shred
+     * 4. completed within completed as Strip
+     * 5. completed to work as Strip (only if working strip is empty)
+     * 
+     * there are 3 shred management actions and 2 strip management actions.
+     * in many case, it is checking if strip is empty or not.
+     * or index is -1 or not.
+     * those check should be became separate methods.
+     * 
+     * so the process is:
+     * 
+     * 1. use old get col, strip, index for now
+     * 2. create method to handle shred to shred actions
+     * 3. create method to handle strip to strip actions
+     * 
+     * 
+     * Moving a shred to a position past the end of a List should put it at the end. --> already handled in moveItem
+     * Attempting an invalid action should have no effect. --> only address valid actions, handle null cases!!
+     */
+
+
+    private int fromPosition = -1;
+    private int fromindex = -1;  
+    private List<Shred> fromStrip;
+
+     // old code let refactor
+    public void doMouse(String action, double x, double y){
+        if (action.equals("pressed")){
+            fromStrip = getStrip(y);      // the List of shreds to move from (possibly null)
+            fromPosition = getColumn(x);  // the index of the shred to move (may be off the end)
+            fromindex = getIndex(y);      //the index of completedStrips to move from
+        }
+        if (action.equals("released")){
+            List<Shred> toStrip = getStrip(y); // the List of shreds to move to (possibly null)
+            int toPosition = getColumn(x);     // the index to move the shred to (may be off the end)
+            int toindex = getIndex(y);         //the index of completedStrips to move to
+            // perform the correct action, depending on the from/to strips/positions
+            /*# YOUR CODE HERE */
+            //move selected shred from allshreds to workingStrip
+            if((fromStrip == allShreds)
+            &&
+            (toStrip == workingStrip)
+            &&
+            (!fromStrip.isEmpty())){
+                this.alltowork(fromStrip, toStrip, fromPosition, toPosition);
+            }
+
+            //move selected shred from workingStrip to workingStrip
+            else if((fromStrip == workingStrip)
+            &&
+            (toStrip == workingStrip)
+            &&
+            (!fromStrip.isEmpty())){
+                this.worktowork(fromStrip, toStrip, fromPosition, toPosition);
+            }
+
+            //move selected shred from workingStrip to allshreds
+            else if((fromStrip == workingStrip)
+            &&
+            (toStrip == allShreds)
+            &&
+            (!fromStrip.isEmpty())){
+                this.worktoall(fromStrip, toStrip, fromPosition, toPosition);
+            }
+
+            //move selected completedStrip within completedStrips
+            else if((completedStrips.contains(fromStrip))
+            &&
+            (completedStrips.contains(toStrip))
+            &&
+            (!completedStrips.isEmpty())
+            &&
+            (fromindex != -1)
+            &&
+            (toindex != -1)){
+                this.reorder(fromStrip,fromindex, toindex);
+            }
+
+            //move selected completedStrip to workingStrip,if workingStrip is empty
+            else if((completedStrips.contains(fromStrip))
+            &&
+            (toStrip == workingStrip)
+            &&
+            (!completedStrips.isEmpty())
+            &&
+            (workingStrip.isEmpty())){
+                this.comptowork(fromStrip, toStrip, fromindex);
+            }      
+            display();
+        }
+    }
 
 
 
+    /**
+     * Returns which column the mouse position is on.
+     * This will be the index in the list of the shred that the mouse is on,
+     * (or the index of the shred that the mouse would be on if the list were long enough)
+     */
+    public int getColumn(double x){
+        return (int) ((x-LEFT)/(SIZE));
+    }
 
+    /**
+     * Returns the strip that the mouse position is on.
+     * This may be the list of all remaining shreds, the working strip, or
+     *  one of the completed strips.
+     * If it is not on any strip, then it returns null.
+     */
+    public List<Shred> getStrip(double y){
+        int row = (int) ((y-TOP_ALL)/(SIZE+GAP));
+        if (row<=0){
+            return shreds;
+        }
+        else if (row==1){
+            return working;
+        }
+        else if (row-2<completed.size()){
+            return completed.get(row-2);
+        }
+        else {
+            return null;
+        }
+    }
 
-
-
+    /**
+     * Get index of selected completedStrip
+     */
+    public int getIndex(double y){
+        int row = (int) ((y-TOP_ALL)/(SIZE+GAP));//calculate which raw was selected
+        int index = 0;
+        if (row-2<completed.size()){
+            index = row-2;//subtract raws for allShreds and working strip
+            return index;
+        }
+        else {
+            return -1;//selected raw was not completedStrip
+        }
+    }
 
 }
