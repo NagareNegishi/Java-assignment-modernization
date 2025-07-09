@@ -150,8 +150,8 @@ public class DeShredder {
      * @param fromIndex the index of the item to move in the from list
      * @param toIndex the index to insert the item in the to list
      */
-    private <T> void moveItem(List<T> from, List<T> to, int fromIndex, int toIndex){
-        if (fromIndex < 0 || fromIndex >= from.size()) return;
+    private <T> boolean moveItem(List<T> from, List<T> to, int fromIndex, int toIndex){
+        if (fromIndex < 0 || fromIndex >= from.size()) return false;
         T item = from.remove(fromIndex);
 
         /*
@@ -160,8 +160,10 @@ public class DeShredder {
         */
         if(toIndex >= to.size()){ // If toIndex is out of bounds, add to the end
             to.add(item);
+            return true;
         } else{
             to.add(toIndex, item);
+            return true;
         }
     }
 
@@ -175,103 +177,73 @@ public class DeShredder {
      *  - move a completed Strip around within the list of completed strips
      *  - move a completed Strip back to become the working strip
      *    (but only if the working strip is currently empty)
-     * 
-     * lets analyze the actions:
-     * 
-     * 1. all to work as Shred
-     * 2. work to all as Shred
-     * 3. work to work as Shred
-     * 4. completed within completed as Strip
-     * 5. completed to work as Strip (only if working strip is empty)
-     * 
-     * there are 3 shred management actions and 2 strip management actions.
-     * in many case, it is checking if strip is empty or not.
-     * or index is -1 or not.
-     * those check should be became separate methods.
-     * 
-     * so the process is:
-     * 
-     * 1. use old get col, strip, index for now
-     * 2. create method to handle shred to shred actions
-     * 3. create method to handle strip to strip actions
-     * 
-     * 
-     * Moving a shred to a position past the end of a List should put it at the end. --> already handled in moveItem
-     * Attempting an invalid action should have no effect. --> only address valid actions, handle null cases!!
      */
 
 
-    private int fromPosition = -1;
-    private int fromindex = -1;  
+    private int fromColumn = -1;
+    private int fromCompletedIndex = -1; // index of completedStrips to move from
     private List<Shred> fromStrip;
 
      // old code let refactor
     public void doMouse(String action, double x, double y){
         if (action.equals("pressed")){
             fromStrip = getStrip(y);      // the List of shreds to move from (possibly null)
-            fromPosition = getColumn(x);  // the index of the shred to move (may be off the end)
-            fromindex = getIndex(y);      //the index of completedStrips to move from
+            fromColumn = getColumn(x);  // the index of the shred to move (may be off the end)
+            fromCompletedIndex = getIndex(y);      //the index of completedStrips to move from
         }
         if (action.equals("released")){
             List<Shred> toStrip = getStrip(y); // the List of shreds to move to (possibly null)
-            int toPosition = getColumn(x);     // the index to move the shred to (may be off the end)
-            int toindex = getIndex(y);         //the index of completedStrips to move to
-            // perform the correct action, depending on the from/to strips/positions
-            /*# YOUR CODE HERE */
-            //move selected shred from allshreds to workingStrip
-            if((fromStrip == allShreds)
-            &&
-            (toStrip == workingStrip)
-            &&
-            (!fromStrip.isEmpty())){
-                this.alltowork(fromStrip, toStrip, fromPosition, toPosition);
-            }
+            int toColumn = getColumn(x);     // the index to move the shred to (may be off the end)
 
-            //move selected shred from workingStrip to workingStrip
-            else if((fromStrip == workingStrip)
-            &&
-            (toStrip == workingStrip)
-            &&
-            (!fromStrip.isEmpty())){
-                this.worktowork(fromStrip, toStrip, fromPosition, toPosition);
+            if (!handleShredToShred(fromStrip, toStrip, fromColumn, toColumn)) {
+                int toCompletedIndex = getIndex(y); //the index of completedStrips to move to
+                handleStripToStrip(fromStrip, toStrip, fromCompletedIndex, toCompletedIndex);
             }
-
-            //move selected shred from workingStrip to allshreds
-            else if((fromStrip == workingStrip)
-            &&
-            (toStrip == allShreds)
-            &&
-            (!fromStrip.isEmpty())){
-                this.worktoall(fromStrip, toStrip, fromPosition, toPosition);
-            }
-
-            //move selected completedStrip within completedStrips
-            else if((completedStrips.contains(fromStrip))
-            &&
-            (completedStrips.contains(toStrip))
-            &&
-            (!completedStrips.isEmpty())
-            &&
-            (fromindex != -1)
-            &&
-            (toindex != -1)){
-                this.reorder(fromStrip,fromindex, toindex);
-            }
-
-            //move selected completedStrip to workingStrip,if workingStrip is empty
-            else if((completedStrips.contains(fromStrip))
-            &&
-            (toStrip == workingStrip)
-            &&
-            (!completedStrips.isEmpty())
-            &&
-            (workingStrip.isEmpty())){
-                this.comptowork(fromStrip, toStrip, fromindex);
-            }      
             display();
         }
     }
 
+
+    /**
+     * Handles moving shreds between strips.
+     * Moves a shred from one strip to another based on the specified columns.
+     * Returns true if the action was successful, false otherwise.
+     * @param fromStrip the strip to move from
+     * @param toStrip the strip to move to
+     * @param fromColumn the column index in the fromStrip to move from
+     * @param toColumn the column index in the toStrip to move to
+     * @return true if the action was successful, false otherwise
+     */
+    public boolean handleShredToShred(List<Shred> fromStrip, List<Shred> toStrip, int fromColumn, int toColumn) {
+        if (fromStrip == null || toStrip == null || fromStrip.isEmpty()) return false;
+        if((fromStrip == shreds) && (toStrip == working)){ // move from all shreds to working strip
+            return moveItem(fromStrip, toStrip, fromColumn, toColumn);
+        }
+        else if((fromStrip == working) && (toStrip == working)){ // move within working strip
+            return moveItem(fromStrip, toStrip, fromColumn, toColumn);
+        }
+        else if((fromStrip == working) && (toStrip == shreds)){ // move from working strip to all shreds
+            return moveItem(fromStrip, toStrip, fromColumn, toColumn);
+        }
+        return false;
+    }
+
+    /**
+     * Handles moving strips between completed strips and the working strip.
+     * @param fromStrip
+     * @param toStrip
+     * @param fromIndex
+     * @param toIndex
+     */
+    public void handleStripToStrip(List<Shred> fromStrip, List<Shred> toStrip, int fromIndex, int toIndex) {
+        if (fromStrip == null || toStrip == null || fromStrip.isEmpty()) return;
+        if (completed.contains(fromStrip) && completed.contains(toStrip) && fromIndex != -1 && toIndex != -1) {
+            moveItem(completed, completed, fromIndex, toIndex);
+        } else if (completed.contains(fromStrip) && toStrip == working && working.isEmpty()) {
+            working = new ArrayList<>(fromStrip);
+            completed.remove(fromIndex);
+        }
+    }
 
 
     /**
@@ -280,7 +252,11 @@ public class DeShredder {
      * (or the index of the shred that the mouse would be on if the list were long enough)
      */
     public int getColumn(double x){
-        return (int) ((x-LEFT)/(SIZE));
+        return (int) ((x - LEFT)/(SIZE));
+    }
+
+    public int getRow(double y){
+        return (int) ((y - TOP_ALL)/(SIZE + GAP));
     }
 
     /**
@@ -290,7 +266,7 @@ public class DeShredder {
      * If it is not on any strip, then it returns null.
      */
     public List<Shred> getStrip(double y){
-        int row = (int) ((y-TOP_ALL)/(SIZE+GAP));
+        int row = getRow(y);
         if (row<=0){
             return shreds;
         }
@@ -309,7 +285,7 @@ public class DeShredder {
      * Get index of selected completedStrip
      */
     public int getIndex(double y){
-        int row = (int) ((y-TOP_ALL)/(SIZE+GAP));//calculate which raw was selected
+        int row = getRow(y);
         int index = 0;
         if (row-2<completed.size()){
             index = row-2;//subtract raws for allShreds and working strip
